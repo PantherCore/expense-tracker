@@ -41,6 +41,14 @@ def add_expense():
     conn.close()
     return redirect('/')
 
-if __name__ == '__main__':
-    init_db()
-    app.run(debug=True)
+
+app = Flask(__name__)
+
+def init_db():
+    # your db creation code
+    pass
+
+init_db()   # <-- IMPORTANT
+
+if __name__ == "__main__":
+    app.run()
