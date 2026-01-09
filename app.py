@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__)
 
-# MongoDB connection (from Render Environment Variable)
+# MongoDB connection from Render environment variable
 MONGO_URI = os.environ.get("MONGO_URI")
 client = MongoClient(MONGO_URI)
 
