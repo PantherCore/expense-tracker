@@ -1,51 +1,39 @@
 from flask import Flask, render_template, request, redirect
-import sqlite3
+from pymongo import MongoClient
+import os
 
 app = Flask(__name__)
 
-# ---------- Database ----------
-def get_db_connection():
-    conn = sqlite3.connect('expenses.db')
-    conn.row_factory = sqlite3.Row
-    return conn
+# MongoDB connection (from Render Environment Variable)
+MONGO_URI = os.environ.get("MONGO_URI")
+client = MongoClient(MONGO_URI)
 
-def init_db():
-    conn = get_db_connection()
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS expenses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            amount REAL NOT NULL
-        )
-    """)
-    conn.commit()
-    conn.close()
+db = client.expenseDB
+collection = db.expenses
 
-# ---------- Routes ----------
-@app.route('/')
+
+@app.route("/", methods=["GET", "POST"])
 def index():
-    conn = get_db_connection()
-    expenses = conn.execute("SELECT * FROM expenses").fetchall()
-    total = conn.execute("SELECT SUM(amount) FROM expenses").fetchone()[0]
-    conn.close()
-    return render_template('index.html', expenses=expenses, total=total or 0)
+    if request.method == "POST":
+        title = request.form["title"]
+        amount = float(request.form["amount"])
 
-@app.route('/add', methods=['POST'])
-def add_expense():
-    title = request.form['title']
-    amount = request.form['amount']
+        collection.insert_one({
+            "title": title,
+            "amount": amount
+        })
 
-    conn = get_db_connection()
-    conn.execute(
-        "INSERT INTO expenses (title, amount) VALUES (?, ?)",
-        (title, amount)
+        return redirect("/")
+
+    expenses = list(collection.find())
+    total = sum(e["amount"] for e in expenses)
+
+    return render_template(
+        "index.html",
+        expenses=expenses,
+        total=total
     )
-    conn.commit()
-    conn.close()
 
-    return redirect('/')
 
-# ---------- Run ----------
-if __name__ == '__main__':
-    init_db()
-    app.run(debug=True)
+if __name__ == "__main__":
+    app.run()
